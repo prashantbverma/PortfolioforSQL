@@ -1,0 +1,192 @@
+Uplers SQL Interview Problem (Senior Data Analyst) | Includes 4 Test Cases
+
+Overview: 
+This document details the solution to a challenging SQL problem where an organization aims to hire employees within a $50,000 budget, prioritizing senior positions first. The SQL query needs to address 4 specific test cases to ensure all requirements are met.
+To solve this problem, we need to create a table to store employee information including their ID, position, and salary.
+Create Table Statements:
+drop table candidates;
+Create table candidates(
+id int primary key,
+positions varchar(10) not null,
+salary int not null);
+Insert Table Statements:
+--test case 1:
+insert into candidates values(1,'junior',5000);
+insert into candidates values(2,'junior',7000);
+insert into candidates values(3,'junior',7000);
+insert into candidates values(4,'senior',10000);
+insert into candidates values(5,'senior',30000);
+insert into candidates values(6,'senior',20000);
+
+Solution for Test Case 1:
+With Seniors_Selection as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Salary_Sum from candidates
+where positions = 'Senior'
+)
+,Seniors_Hiring_Budget as (
+Select count(*) as Seniors, sum(salary) as Amount_used, 50000 - Sum(salary) as Amount_Remaining from Seniors_Selection 
+where Running_Salary_Sum < 50000
+)
+,juniors as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Sum from candidates
+where positions = 'junior')
+,Juniors_Hired as (
+Select count(*) as Juniors_Count from juniors 
+where Running_Sum <= (Select Amount_Remaining from Seniors_Hiring_Budget)
+)
+Select j.Juniors_Count as Juniors, S.Seniors from Seniors_Hiring_Budget s
+join 
+Juniors_Hired j
+on 1=1;
+Output:
+ 
+-------Test Case 2
+Delete from candidates;
+
+insert into candidates values(20,'junior',10000);
+insert into candidates values(30,'senior',15000);
+insert into candidates values(40,'senior',30000);
+
+Select * from candidates;
+Input:
+ 
+Desired Output:
+ 
+Solution for Test Case 2: 
+
+With Seniors_Selection as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Salary_Sum from candidates
+where positions = 'Senior')
+,Seniors_Hiring_Budget as (
+Select count(*) as Seniors, sum(salary) as Amount_used, 50000 - Sum(salary) as Amount_Remaining from Seniors_Selection 
+where Running_Salary_Sum <= 50000
+)
+,juniors as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Sum from candidates
+where positions = 'junior')
+,Juniors_Hired as (
+Select count(*) as Juniors_Count from juniors 
+where Running_Sum <= (Select Amount_Remaining from Seniors_Hiring_Budget)
+)
+Select j.Juniors_Count as Juniors, S.Seniors from Seniors_Hiring_Budget s
+join 
+Juniors_Hired j
+on 1=1;
+
+Output:
+ 
+----Test Case 3
+
+Delete from candidates;
+
+insert into candidates values(1,'junior',15000);
+insert into candidates values(2,'junior',15000);
+insert into candidates values(3,'junior',20000);
+insert into candidates values(4,'senior',60000);
+
+Select * from candidates;
+Desired Output: 
+ 
+Solution for Test Case 3: 
+With Seniors_Selection as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Salary_Sum from candidates
+where positions = 'Senior'
+)
+, Seniors_Hiring_Budget as (
+Select count(*) as Seniors, sum(salary) as Amount_used, case when Sum(salary) is null then 50000 end as Amount_Remaining from Seniors_Selection 
+where Running_Salary_Sum <= 50000
+), juniors as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Sum from candidates
+where positions = 'junior')
+, Juniors_Hired as (
+Select count(*) as Juniors_Count from juniors 
+where Running_Sum <= (Select Amount_Remaining from Seniors_Hiring_Budget)
+)
+Select j.Juniors_Count as Juniors, S.Seniors from Seniors_Hiring_Budget s
+join 
+Juniors_Hired j
+on 1=1;
+
+Output Achieved: 
+ 
+--------Test 4
+
+Delete from candidates;
+
+insert into candidates values(10,'junior',10000);
+insert into candidates values(40,'junior',10000);
+insert into candidates values(20,'senior',15000);
+insert into candidates values(30,'senior',30000);
+insert into candidates values(50,'senior',15000);
+
+Select * from candidates order by positions;
+
+Input Table:  
+
+Desired Output:  
+Solution for Test Case 4: 
+
+With Seniors_Selection as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Salary_Sum from candidates
+where positions = 'Senior'
+)
+, Seniors_Hiring_Budget as (
+Select count(*) as Seniors, sum(salary) as Amount_used, case when Sum(salary) is null then 50000 else 50000-sum(salary) end as Amount_Remaining from Seniors_Selection 
+where Running_Salary_Sum <= 50000
+), juniors as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Sum from candidates
+where positions = 'junior')
+, Juniors_Hired as (
+Select count(*) as Juniors_Count from juniors 
+where Running_Sum <= (Select Amount_Remaining from Seniors_Hiring_Budget)
+)
+Select j.Juniors_Count as Juniors, S.Seniors from Seniors_Hiring_Budget s
+join 
+Juniors_Hired j
+on 1=1;
+Output:  
+
+Conclusion:
+Here is the final explanation of the solution provided for the SQL problem statement:
+CTE: Seniors_Selection
+With Seniors_Selection as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Salary_Sum from candidates
+where positions = 'Senior'
+)
+ Purpose: Selects senior candidates and calculates a running sum of their salaries, ordered in ascending order.
+Function: “sum(salary) over(order by salary asc rows between unbounded preceding and current row)” calculates the cumulative salary up to the current row.
+
+CTE: Seniors_Hiring_Budget
+, Seniors_Hiring_Budget as (
+Select count(*) as Seniors, sum(salary) as Amount_used, case when Sum(salary) is null then 50000 else 50000-sum(salary) end as Amount_Remaining from Seniors_Selection 
+where Running_Salary_Sum <= 50000
+)
+Purpose: Determines how many senior candidates can be hired within the $50,000 budget and Amount Remaining after hiring Seniors, if no seniors hired due to budget exceeds then case statement will take care of budget.
+*****This step is the most crucial step within the whole process
+Function: Calculates the total number of senior candidates hired, the amount used, and the remaining budget.
+CTE: juniors
+
+,juniors as (
+Select *, sum(salary) over(order by salary asc rows between unbounded preceding and current row) as Running_Sum from candidates
+where positions = 'junior')
+Purpose: Selects junior candidates and calculates a running sum of their salaries, ordered in ascending order.
+Function: Similar to the Seniors_Selection CTE, but for junior positions.
+CTE: Juniors_Hired
+,Juniors_Hired as (
+Select count(*) as Juniors_Count from juniors 
+where Running_Sum <= (Select Amount_Remaining from Seniors_Hiring_Budget)
+)
+Purpose: Determines how many junior candidates can be hired within the remaining budget after hiring senior candidates.
+Function: Filters junior candidates based on the remaining budget.
+
+Final Select Statement
+Select j.Juniors_Count as Juniors, S.Seniors from Seniors_Hiring_Budget s
+join 
+Juniors_Hired j
+on 1=1;
+
+•	Purpose: Combines the results to provide the final count of hired senior and junior candidates.
+•	Function: Joins the results from Seniors_Hiring_Budget and Juniors_Hired to display the number of senior and junior hires within the budget.
+Summary
+This SQL solution efficiently prioritizes hiring senior candidates within a specified budget, then allocates any remaining budget to hire junior candidates. It uses a series of Common Table Expressions (CTEs) and window functions to calculate running totals and determine the number of candidates that can be hired within the budget constraints, which will take care of all the test cases mentioned above using the last Solution Script.
+
