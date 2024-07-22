@@ -1,0 +1,118 @@
+--------------------------Data Structure Algorithm-------------------------
+
+--Question 1: Find the Kth Largest Element in a Stream
+--Table Creation Statement:
+CREATE TABLE Stream (
+    id INT PRIMARY KEY,
+    value INT
+);
+
+-- Sample Data
+INSERT INTO Stream (id, value) VALUES
+(1, 10),
+(2, 20),
+(3, 15),
+(4, 25),
+(5, 5);
+
+---Question: Write a query to find the Kth largest element in the Stream table.
+Declare @k int;
+Set @k =  1; ----change this variable to the desired kth value
+with kth_largest_element as 
+(
+	Select *, rank() over(order by value desc) as rnk from stream
+)
+Select * from kth_largest_element 
+where rnk = @k;
+
+------------Question 2: Find the Longest Consecutive Sequence
+----Table Creation Statement:
+CREATE TABLE Sequence (
+    id INT PRIMARY KEY,
+    value INT
+);
+
+-- Sample Data
+INSERT INTO Sequence (id, value) VALUES
+(1, 100),
+(2, 4),
+(3, 200),
+(4, 1),
+(5, 3),
+(6, 2),
+(7, 5);
+
+select * from Sequence
+
+----Question: Write a query to find the length of the longest consecutive elements sequence in the Sequence table.
+
+Select * from Sequence;
+
+with rankedsequence as (
+Select Value
+, value - ROW_NUMBER() over(order by value) as grp 
+from Sequence
+),
+groupedsequence as (
+Select grp, 
+Count(*) as count
+from rankedsequence
+group by grp
+)
+Select max(count) as longest_consecutive_sequence from groupedsequence;
+
+-----recursive cte method
+with rcte as (
+Select value, 1 as length from Sequence
+where value - 1 not in (Select value from Sequence)
+/* this above query is finding if there is any starting point before the value, or lets call it precedssor */
+Union all
+
+Select s.value, r.length + 1 from Sequence s ---- loop will run after union
+inner join rcte r
+on s.value = r.value + 1
+)
+Select max(length) as longest_consecutive_sequence from rcte;
+
+----Question 3: Find All Anagrams in a List of Strings
+--Table Creation Statement:
+CREATE TABLE Strings (
+    id INT PRIMARY KEY,
+    word VARCHAR(50) );
+
+-- Sample Data
+INSERT INTO Strings (id, word) VALUES
+(1, 'listen'),
+(2, 'silent'),
+(3, 'enlist'),
+(4, 'hello'),
+(5, 'olleh'),
+(6, 'world');
+
+--Question: Write a query to find all groups of anagrams from the Strings table.
+
+Select * from strings;
+
+----Solution: 
+with r_cte as (
+Select *, SUBSTRING(word,1,1) as char, 1 as position from strings
+union all
+Select id, word, SUBSTRING(word, position + 1, 1) as char, position + 1 from r_cte
+where position < len(word)
+)
+, alphabetical_order as (
+Select *,
+case when LOWER(char) between 'a' and 'z' then ASCII(lower(char)) - ASCII('a') + 1 END
+as char_order
+from r_cte
+), row_reversed as (
+Select *, ROW_NUMBER() over(partition by id order by char_order asc) as row_rn  from alphabetical_order
+--where char <> ''
+), string_agg_group as (
+Select id, word, STRING_AGG(char,'') within group (order by row_rn) as strngagg from row_reversed
+group by id, word)
+Select  STRING_AGG(word,', ') as anagram_group
+from 
+string_agg_group
+group by strngagg
+having count(*) > 1;
